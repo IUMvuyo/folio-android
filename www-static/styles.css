@@ -1,0 +1,330 @@
+/* Folio — editorial / newspaper signature, ported 1:1 from the iOS Theme.swift.
+   System fonts only (no web fonts / CDNs — privacy). */
+
+:root {
+  /* Day (Light) — warm-white newsprint, exact hex from the brief. */
+  --paper:        #F4EFE6;
+  --paper-dark:   #ECE6D8;
+  --off-white:    #FBF8F2;
+  --ink:          #28231E;
+  --charcoal:     #3A351C;
+  --muted-ink:    #6B6459;
+  --rule:         #2A2621;
+  --red:          #C02423;
+  --red-ink:      #A31C19;
+  --stamp:        #C8211C;
+  --highlight:    rgba(246, 219, 89, 0.55);
+  --shadow:       rgba(0, 0, 0, 0.06);
+
+  --serif: Georgia, 'Times New Roman', 'Times', serif;
+  --sans: -apple-system, 'Segoe UI', system-ui, sans-serif;
+  --mono: 'Consolas', 'SFMono-Regular', ui-monospace, monospace;
+}
+
+:root[data-theme='night'] {
+  /* Night Edition — deep warm charcoal, never pure black; lifted red. */
+  --paper:        #16140F;
+  --paper-dark:   #201D17;
+  --off-white:    #2A2622;
+  --ink:          #EAE3D5;
+  --charcoal:     #C2BBAE;
+  --muted-ink:    #8F897C;
+  --rule:         #6E685C;
+  --red:          #D54A45;
+  --red-ink:      #C23C38;
+  --stamp:        #D94E48;
+  --highlight:    rgba(199, 163, 59, 0.42);
+  --shadow:       rgba(0, 0, 0, 0.55);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  height: 100%;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--serif);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  user-select: none;
+  /* respect Android display cutouts / gesture nav */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+/* small-caps tracked label */
+.kicker, .sectionlabel, .meta, .offline, .btn-label {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-variant: small-caps;
+  text-transform: lowercase;
+  letter-spacing: 0.16em;
+}
+
+/* ── Masthead ───────────────────────────────────────────────────────────── */
+.masthead {
+  padding: 18px 28px 12px;
+  background: var(--paper);
+  flex: 0 0 auto;
+}
+.rule-double { display: flex; flex-direction: column; gap: 3px; }
+.rule-double > span:first-child { height: 1.4px; background: var(--rule); display: block; }
+.rule-double > span:last-child  { height: 0.7px; background: var(--rule); display: block; }
+
+.masthead-row {
+  display: flex; align-items: baseline; justify-content: space-between;
+  padding: 8px 2px 6px;
+}
+.masthead-stamp {
+  font-family: var(--sans); font-weight: 700; font-variant: small-caps;
+  letter-spacing: 0.18em; font-size: 11px; color: var(--charcoal);
+  text-transform: lowercase;
+}
+.masthead-name {
+  font-family: var(--serif); font-weight: 700; font-size: 46px;
+  letter-spacing: 0.01em; color: var(--ink); text-align: center;
+  line-height: 1; white-space: nowrap;
+}
+.masthead-sub {
+  text-align: center; font-family: var(--sans); font-weight: 700;
+  font-variant: small-caps; letter-spacing: 0.24em; font-size: 11px;
+  color: var(--charcoal); padding: 6px 0 8px; text-transform: lowercase;
+}
+
+/* Offline badge — the brand promise, always visible */
+.offline {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 10px; letter-spacing: 0.2em; color: var(--charcoal);
+  border: 1px solid var(--rule); padding: 5px 10px; text-transform: lowercase;
+}
+.offline .dot {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--red);
+}
+
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 2px 4px;
+}
+.topbar .left { display: flex; gap: 14px; align-items: center; }
+
+.theme-toggle {
+  font-family: var(--sans); font-variant: small-caps; font-weight: 700;
+  letter-spacing: 0.16em; font-size: 10px; color: var(--charcoal);
+  background: none; border: 1px solid var(--rule); padding: 5px 10px;
+  cursor: pointer; text-transform: lowercase;
+}
+.theme-toggle:hover { background: var(--off-white); }
+
+/* ── Layout ─────────────────────────────────────────────────────────────── */
+#app { display: flex; flex-direction: column; height: 100%; }
+.content {
+  flex: 1 1 auto; overflow-y: auto; padding: 22px 28px 40px;
+  background: var(--paper);
+}
+.content::-webkit-scrollbar { width: 10px; }
+.content::-webkit-scrollbar-thumb { background: var(--rule); border-radius: 0; }
+
+/* ── Section header (title + flanking rules) ─────────────────────────────── */
+.section {
+  display: flex; align-items: center; gap: 10px; margin: 26px 0 16px;
+}
+.section:first-child { margin-top: 4px; }
+.section .bar { flex: 1 1 auto; height: 1.5px; background: var(--ink); }
+.section .sectionlabel {
+  font-size: 12px; letter-spacing: 0.22em; color: var(--ink); white-space: nowrap;
+}
+
+/* ── Tool cards grid ─────────────────────────────────────────────────────── */
+.grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+.card {
+  background: var(--off-white); border: 1px solid var(--rule);
+  padding: 16px 16px 14px; cursor: pointer; position: relative;
+  transition: transform 0.08s ease, background 0.12s ease;
+  display: flex; flex-direction: column; min-height: 116px;
+}
+.card:hover { background: var(--paper-dark); }
+.card:active { transform: translateY(1px); }
+.card .card-kicker {
+  font-family: var(--sans); font-weight: 700; font-variant: small-caps;
+  letter-spacing: 0.18em; font-size: 9.5px; color: var(--red);
+  text-transform: lowercase; margin-bottom: 8px;
+}
+.card .card-title {
+  font-family: var(--serif); font-weight: 700; font-size: 19px;
+  color: var(--ink); line-height: 1.12; margin-bottom: 6px;
+}
+.card .card-blurb {
+  font-family: var(--serif); font-size: 13px; color: var(--muted-ink);
+  line-height: 1.35; flex: 1 1 auto;
+}
+.card.soon { opacity: 0.62; }
+.card .soon-tag {
+  position: absolute; top: 12px; right: 12px;
+  font-family: var(--sans); font-variant: small-caps; font-weight: 700;
+  letter-spacing: 0.14em; font-size: 8.5px; color: var(--charcoal);
+  border: 1px solid var(--rule); padding: 2px 6px; text-transform: lowercase;
+}
+
+/* ── Tool panel (modal-as-broadsheet, no gray overlay) ───────────────────── */
+.scrim {
+  position: fixed; inset: 0; background: rgba(40, 35, 30, 0.28);
+  display: none; align-items: flex-start; justify-content: center;
+  z-index: 50; padding: 36px 20px; overflow-y: auto;
+}
+.scrim.open { display: flex; }
+.panel {
+  background: var(--paper); border: 1.5px solid var(--rule);
+  width: min(760px, 100%); padding: 0 0 24px; box-shadow: 0 22px 60px var(--shadow);
+}
+.panel-head { padding: 18px 26px 10px; }
+.panel-kicker {
+  font-family: var(--sans); font-weight: 700; font-variant: small-caps;
+  letter-spacing: 0.2em; font-size: 11px; color: var(--red);
+  text-transform: lowercase;
+}
+.panel-title {
+  font-family: var(--serif); font-weight: 700; font-size: 30px;
+  color: var(--ink); margin: 4px 0 4px; line-height: 1.08;
+}
+.panel-blurb { font-family: var(--serif); font-size: 14px; color: var(--muted-ink); }
+.panel-body { padding: 16px 26px 0; }
+
+.row { margin: 14px 0; }
+.row label {
+  display: block; font-family: var(--sans); font-variant: small-caps;
+  font-weight: 700; letter-spacing: 0.14em; font-size: 10px;
+  color: var(--charcoal); margin-bottom: 6px; text-transform: lowercase;
+}
+.row input[type='text'], .row input[type='number'], .row select {
+  width: 100%; font-family: var(--serif); font-size: 15px; color: var(--ink);
+  background: var(--off-white); border: 1px solid var(--rule);
+  padding: 9px 11px; outline: none;
+}
+.row input:focus, .row select:focus { border-color: var(--red); }
+
+.filelist {
+  border: 1px solid var(--rule); background: var(--off-white);
+  max-height: 220px; overflow-y: auto;
+}
+.filelist .fileitem {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 12px; border-bottom: 1px solid var(--rule);
+  font-family: var(--serif); font-size: 14px; color: var(--ink);
+}
+.filelist .fileitem:last-child { border-bottom: none; }
+.filelist .fileitem .fmeta { font-size: 11px; color: var(--muted-ink); font-family: var(--sans); }
+.fileitem .ord { display: flex; gap: 4px; }
+.fileitem .ord button, .fileitem .rm {
+  background: none; border: 1px solid var(--rule); cursor: pointer;
+  font-size: 12px; padding: 1px 7px; color: var(--charcoal); font-family: var(--sans);
+}
+.fileitem .rm { color: var(--red); }
+
+.actions { display: flex; gap: 10px; padding: 18px 26px 0; align-items: center; }
+.btn {
+  font-family: var(--sans); font-variant: small-caps; font-weight: 700;
+  letter-spacing: 0.16em; font-size: 12px; text-transform: lowercase;
+  padding: 11px 18px; border: 1.5px solid var(--rule); background: var(--off-white);
+  color: var(--ink); cursor: pointer;
+}
+.btn:hover { background: var(--paper-dark); }
+.btn.primary { background: var(--red); border-color: var(--red); color: #FBF8F2; }
+.btn.primary:hover { background: var(--red-ink); }
+.btn.ghost { border: none; background: none; color: var(--charcoal); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.status {
+  font-family: var(--sans); font-variant: small-caps; font-weight: 700;
+  letter-spacing: 0.16em; font-size: 11px; color: var(--charcoal);
+  text-transform: lowercase; margin-left: auto;
+}
+.status.err { color: var(--red); }
+
+/* TYPESETTING progress bar */
+.progress { height: 4px; background: var(--paper-dark); border: 1px solid var(--rule); margin: 14px 26px 0; }
+.progress > div { height: 100%; background: var(--red); width: 0%; transition: width 0.2s; }
+
+/* FILED stamp */
+.filed {
+  display: inline-block; font-family: var(--sans); font-weight: 900;
+  letter-spacing: 0.18em; font-size: 14px; color: var(--stamp);
+  border: 2px solid var(--stamp); padding: 8px 14px; text-transform: uppercase;
+  transform: rotate(-7deg); opacity: 0.92; margin: 18px 26px 0;
+}
+
+/* ── Viewer ─────────────────────────────────────────────────────────────── */
+.viewer { display: flex; flex-direction: column; height: 100%; }
+.viewer-bar {
+  display: flex; align-items: center; gap: 14px; padding: 10px 26px;
+  border-bottom: 1px solid var(--rule); background: var(--paper-dark);
+}
+.viewer-bar .vlabel { font-family: var(--serif); font-weight: 700; font-size: 16px; }
+.viewer-bar .vmeta { font-family: var(--sans); font-variant: small-caps; letter-spacing: 0.14em; font-size: 11px; color: var(--charcoal); text-transform: lowercase; }
+.viewer-pages { flex: 1 1 auto; overflow-y: auto; padding: 24px; background: var(--paper-dark); text-align: center; }
+.viewer-pages img { display: block; margin: 0 auto 22px; box-shadow: 0 8px 24px var(--shadow); background: #fff; max-width: 100%; }
+
+/* signature canvas */
+#sigPad { border: 1px solid var(--rule); background: var(--off-white); width: 100%; height: 180px; cursor: crosshair; touch-action: none; }
+
+/* text result */
+.textout {
+  width: 100%; min-height: 220px; max-height: 360px; overflow-y: auto;
+  font-family: var(--mono); font-size: 12px; line-height: 1.5; color: var(--ink);
+  background: var(--off-white); border: 1px solid var(--rule); padding: 12px;
+  white-space: pre-wrap; user-select: text;
+}
+
+/* ── Welcome ────────────────────────────────────────────────────────────── */
+.welcome-scrim {
+  position: fixed; inset: 0; background: var(--paper); z-index: 100;
+  display: flex; align-items: center; justify-content: center; padding: 30px;
+}
+.welcome {
+  max-width: 560px; text-align: center; border: 1.5px solid var(--rule);
+  padding: 40px 38px; background: var(--off-white);
+}
+.welcome .w-name { font-family: var(--serif); font-weight: 700; font-size: 54px; line-height: 1; }
+.welcome .w-sub { font-family: var(--sans); font-variant: small-caps; letter-spacing: 0.22em; font-size: 12px; color: var(--charcoal); margin: 12px 0 22px; text-transform: lowercase; }
+.welcome .w-body { font-family: var(--serif); font-size: 19px; line-height: 1.5; color: var(--ink); margin-bottom: 8px; }
+.welcome .w-body b { color: var(--red); }
+.welcome .w-note { font-family: var(--serif); font-size: 14px; color: var(--muted-ink); margin: 16px 0 26px; }
+
+.dropcap::first-letter {
+  font-family: var(--serif); font-weight: 800; font-size: 3.1em;
+  float: left; line-height: 0.8; padding: 4px 8px 0 0; color: var(--red);
+}
+
+/* ── Mobile / touch (Android) ──────────────────────────────────────────────
+   The editorial look is preserved; these rules just make the broadsheet fit a
+   phone: bigger tap targets, single-column desks on narrow screens, and a
+   near-full-screen tool panel. */
+textarea.textout {
+  width: 100%; min-height: 200px; max-height: 50vh; overflow-y: auto;
+  font-family: var(--mono); font-size: 12px; line-height: 1.5; color: var(--ink);
+  background: var(--off-white); border: 1px solid var(--rule); padding: 12px;
+  white-space: pre-wrap; user-select: text; resize: vertical;
+}
+
+@media (max-width: 760px) {
+  .masthead { padding: 14px 16px 10px; }
+  .masthead-name { font-size: 38px; }
+  .content { padding: 16px 16px 32px; }
+  .grid { grid-template-columns: 1fr; gap: 12px; }
+  .card { min-height: 0; padding: 14px; }
+  .card .card-title { font-size: 18px; }
+
+  .scrim { padding: 0; align-items: stretch; }
+  .panel {
+    width: 100%; min-height: 100%; border: none;
+    box-shadow: none; padding-bottom: 28px;
+  }
+  .panel-head { padding: 16px 18px 8px; }
+  .panel-title { font-size: 26px; }
+  .panel-body { padding: 12px 18px 0; }
+  .actions { padding: 16px 18px 0; flex-wrap: wrap; }
+  .btn { padding: 13px 18px; font-size: 13px; }      /* ≥44px tap target */
+  .row input, .row select { padding: 12px 11px; font-size: 16px; } /* no iOS-style zoom */
+  .progress, .filed { margin-left: 18px; margin-right: 18px; }
+}

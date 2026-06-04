@@ -1,0 +1,12 @@
+{
+  "appId": "com.zimasilevuyo.folio",
+  "appName": "Folio",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false
+  },
+  "server": {
+    "androidScheme": "https",
+    "cleartext": false
+  }
+}

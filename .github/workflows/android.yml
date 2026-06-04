@@ -1,0 +1,109 @@
+name: Build Android APK + AAB
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write   # required so the release step can create/publish v1.0.0
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web assets (bundle + copy offline assets)
+        run: npm run build
+
+      - name: Capacitor sync (copy www into the Android project)
+        run: npx cap sync android
+
+      # ── Signing keystore ──────────────────────────────────────────────────
+      # We sign release builds so the APK/AAB are INSTALLABLE (an unsigned
+      # release APK cannot be installed). This is a privacy/utility app, not a
+      # Play Store identity, so a throwaway key generated here is fine. If the
+      # secret is present we use it; otherwise we generate a fresh throwaway
+      # keystore in-job. (build.gradle also falls back to debug signing if no
+      # keystore env is set, so the build can never fail for lack of a key.)
+      - name: Provision signing keystore
+        id: keystore
+        env:
+          FOLIO_KEYSTORE_BASE64: ${{ secrets.FOLIO_KEYSTORE_BASE64 }}
+        run: |
+          KS_PATH="$RUNNER_TEMP/folio-release.jks"
+          if [ -n "$FOLIO_KEYSTORE_BASE64" ]; then
+            echo "Using keystore from repo secret FOLIO_KEYSTORE_BASE64."
+            echo "$FOLIO_KEYSTORE_BASE64" | base64 -d > "$KS_PATH"
+            echo "store_pass=${{ secrets.FOLIO_KEYSTORE_PASSWORD }}" >> "$GITHUB_OUTPUT"
+            echo "key_alias=${{ secrets.FOLIO_KEY_ALIAS }}" >> "$GITHUB_OUTPUT"
+            echo "key_pass=${{ secrets.FOLIO_KEY_PASSWORD }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "No keystore secret found — generating a throwaway keystore for this build."
+            keytool -genkeypair -v \
+              -keystore "$KS_PATH" \
+              -alias folio \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass folio12345 -keypass folio12345 \
+              -dname "CN=Folio Private Edition, O=Quantyx, C=ZA"
+            echo "store_pass=folio12345" >> "$GITHUB_OUTPUT"
+            echo "key_alias=folio" >> "$GITHUB_OUTPUT"
+            echo "key_pass=folio12345" >> "$GITHUB_OUTPUT"
+          fi
+          echo "ks_path=$KS_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Build release APK + AAB
+        working-directory: android
+        env:
+          FOLIO_KEYSTORE_FILE: ${{ steps.keystore.outputs.ks_path }}
+          FOLIO_KEYSTORE_PASSWORD: ${{ steps.keystore.outputs.store_pass }}
+          FOLIO_KEY_ALIAS: ${{ steps.keystore.outputs.key_alias }}
+          FOLIO_KEY_PASSWORD: ${{ steps.keystore.outputs.key_pass }}
+        run: |
+          chmod +x ./gradlew
+          ./gradlew --no-daemon assembleRelease bundleRelease
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p out
+          cp android/app/build/outputs/apk/release/app-release.apk out/Folio-1.0.0.apk
+          cp android/app/build/outputs/bundle/release/app-release.aab out/Folio-1.0.0.aab
+          ls -la out
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Folio-Android
+          path: |
+            out/Folio-1.0.0.apk
+            out/Folio-1.0.0.aab
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish to GitHub Release v1.0.0 (stable download link)
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete v1.0.0 -y --cleanup-tag || true
+          gh release create v1.0.0 out/Folio-1.0.0.apk out/Folio-1.0.0.aab \
+            --title "Folio for Android v1.0.0" \
+            --notes "Folio — Private Edition for Android & Huawei AppGallery. Every PDF tool, 100% on your device. No network, ever (the app ships with NO INTERNET permission). Sideload the .apk on any Android phone incl. Huawei (HMS); .aab is for Google Play. Signed with a throwaway CI key."

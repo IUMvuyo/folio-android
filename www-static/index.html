@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en" data-theme="day">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="light dark" />
+  <!-- CSP: no remote anything. Local scripts/styles only, plus data/blob images
+       and wasm for the OCR core. This is the privacy guarantee, enforced in the
+       page on top of the fact that we wrote zero network code.
+       'wasm-unsafe-eval' is required by tesseract.js' bundled wasm core — it is
+       local execution, NOT a network/eval-of-remote permission. -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' blob: data:; worker-src 'self' blob:; object-src 'none';" />
+  <title>Folio — Private Edition</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Masthead -->
+    <header class="masthead">
+      <div class="rule-double"><span></span><span></span></div>
+      <div class="masthead-row">
+        <span class="masthead-stamp">est. 2026</span>
+        <span class="masthead-stamp">private edition</span>
+      </div>
+      <div class="masthead-name">Folio</div>
+      <div class="masthead-sub">nothing leaves this device</div>
+      <div class="topbar">
+        <div class="left">
+          <span class="offline"><span class="dot"></span>offline · no network</span>
+        </div>
+        <button class="theme-toggle" id="themeToggle">night edition</button>
+      </div>
+      <div class="rule-double"><span></span><span></span></div>
+    </header>
+
+    <!-- Desk grid -->
+    <main class="content" id="deskRoot"></main>
+  </div>
+
+  <!-- Tool panel (broadsheet) -->
+  <div class="scrim" id="scrim">
+    <div class="panel" id="panel"></div>
+  </div>
+
+  <!-- First-run welcome -->
+  <div class="welcome-scrim" id="welcome" style="display:none">
+    <div class="welcome">
+      <div class="w-name">Folio</div>
+      <div class="w-sub">private edition</div>
+      <p class="w-body"><b>100% free.</b> Every PDF tool, <b>100% on your device.</b></p>
+      <p class="w-note">No account. No cloud. No telemetry. Not a single byte leaves
+        this phone — the offline badge in the masthead never goes away.</p>
+      <button class="btn primary" id="welcomeStart">Enter the pressroom</button>
+    </div>
+  </div>
+
+  <script src="folio.bundle.js"></script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+apply plugin: 'com.android.application'
+
+android {
+    namespace "com.zimasilevuyo.folio"
+    compileSdk rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "com.zimasilevuyo.folio"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 1
+        versionName "1.0.0"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+
+    // ── Release signing ──────────────────────────────────────────────────────
+    // We sign the release build so the APK/AAB is INSTALLABLE (an unsigned
+    // release APK cannot be installed). The keystore is a throwaway generated
+    // in CI from repo secrets — this is a privacy/utility tool, not a Play Store
+    // identity, so a CI-generated key is fine. If no keystore env vars are set
+    // (e.g. a plain local build), we fall back to the debug signing config so
+    // the build still produces an installable APK and never fails for lack of a
+    // key. NO Google services, NO Firebase — pure AndroidX + Capacitor.
+    signingConfigs {
+        release {
+            def storeFilePath = System.getenv("FOLIO_KEYSTORE_FILE") ?: project.findProperty("FOLIO_KEYSTORE_FILE")
+            if (storeFilePath) {
+                storeFile file(storeFilePath)
+                storePassword System.getenv("FOLIO_KEYSTORE_PASSWORD") ?: project.findProperty("FOLIO_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("FOLIO_KEY_ALIAS") ?: project.findProperty("FOLIO_KEY_ALIAS")
+                keyPassword System.getenv("FOLIO_KEY_PASSWORD") ?: project.findProperty("FOLIO_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            def hasKeystore = (System.getenv("FOLIO_KEYSTORE_FILE") ?: project.findProperty("FOLIO_KEYSTORE_FILE")) != null
+            signingConfig hasKeystore ? signingConfigs.release : signingConfigs.debug
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+// Folio uses NO Google services. The google-services plugin block that
+// Capacitor scaffolds here has been removed along with its classpath — there is
+// no Firebase / GMS / analytics anywhere in this app. A bare APK runs on any
+// Android device, including Huawei (HMS) phones with no Google services at all.

@@ -1,0 +1,39 @@
+{
+  "name": "folio-android",
+  "version": "1.0.0",
+  "description": "Folio — Private Edition for Android & Huawei AppGallery. Every PDF tool, 100% on your device. No network, ever.",
+  "author": {
+    "name": "Quantyx",
+    "email": "zimasilevuyo@gmail.com"
+  },
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "clean": "rimraf www",
+    "copy:assets": "node scripts/copy-assets.mjs",
+    "bundle": "esbuild src/web/folio.js --bundle --format=iife --global-name=Folio --outfile=www/folio.bundle.js --inject:src/web/shims.js --define:global=globalThis --minify",
+    "build": "npm run clean && npm run copy:assets && npm run bundle",
+    "sync": "npx cap sync android",
+    "build:sync": "npm run build && npm run sync"
+  },
+  "dependencies": {
+    "@capacitor/android": "6.2.1",
+    "@capacitor/core": "6.2.1",
+    "@capacitor/filesystem": "6.0.3",
+    "@capacitor/share": "6.0.3",
+    "@capawesome/capacitor-file-picker": "6.2.0",
+    "docx": "9.7.1",
+    "exceljs": "4.4.0",
+    "mammoth": "1.12.0",
+    "pdf-lib": "1.17.1",
+    "pdfjs-dist": "4.10.38",
+    "pptxgenjs": "4.0.1",
+    "tesseract.js": "5.1.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "6.2.1",
+    "esbuild": "0.25.5",
+    "rimraf": "6.0.1"
+  }
+}
