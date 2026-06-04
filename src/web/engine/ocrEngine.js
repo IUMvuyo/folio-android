@@ -4,8 +4,10 @@
 //   • workerPath  → tess/worker.min.js          (copied from tesseract.js/dist)
 //   • corePath    → tess/                         (tesseract-core wasm, copied)
 //   • langPath    → tess/lang/                    (eng.traineddata.gz, bundled)
-// gzip:true because our language file is the gzipped model. cacheMethod:'none'
-// so it never tries to write/read an IndexedDB cache that could imply a fetch.
+// gzip:false because we ship the DECOMPRESSED eng.traineddata (the Android
+// build pipeline auto-gunzips .gz assets, so we pre-decompress and store it
+// plain — see scripts/copy-assets.mjs). cacheMethod:'none' so it never tries to
+// write/read an IndexedDB cache that could imply a fetch.
 // Verified: with these three local paths set, tesseract.js issues ZERO network
 // requests — it works fully air-gapped.
 
@@ -30,7 +32,7 @@ export async function ocrImage(image, { lang = 'eng', onProgress } = {}) {
     workerPath,
     corePath,
     langPath,
-    gzip: true,
+    gzip: false,
     cacheMethod: 'none',
     logger: (m) => {
       if (onProgress && m.status === 'recognizing text') onProgress(m.progress);
@@ -51,7 +53,7 @@ export async function ocrPages(pageImages, { lang = 'eng', onProgress } = {}) {
     workerPath,
     corePath,
     langPath,
-    gzip: true,
+    gzip: false,
     cacheMethod: 'none',
   });
   const results = [];

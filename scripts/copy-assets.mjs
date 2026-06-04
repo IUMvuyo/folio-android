@@ -6,7 +6,9 @@
 // The esbuild bundle (folio.bundle.js) is produced by the `bundle` script.
 
 import { mkdir, copyFile, cp, access } from 'node:fs/promises';
-import { constants } from 'node:fs';
+import { constants, createReadStream, createWriteStream } from 'node:fs';
+import { createGunzip } from 'node:zlib';
+import { pipeline } from 'node:stream/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -81,7 +83,16 @@ async function main() {
       'or ../Folio-Windows/assets/lang/. OCR cannot ship without it.'
     );
   }
-  await copy(langSrc, join(www, 'tess/lang/eng.traineddata.gz'), 'eng language model (offline OCR)');
+  // IMPORTANT: the Android Gradle/AAPT packaging step auto-DECOMPRESSES `.gz`
+  // assets and stores them under the bare name (eng.traineddata.gz →
+  // eng.traineddata). That would 404 a gzip:true tesseract load. So we ship the
+  // DECOMPRESSED model ourselves as eng.traineddata and tell tesseract gzip:
+  // false. app/build.gradle adds noCompress "traineddata" so AAPT leaves it as
+  // is. (On web/dev this same decompressed file works too.)
+  const langOut = join(www, 'tess/lang/eng.traineddata');
+  await mkdir(dirname(langOut), { recursive: true });
+  await pipeline(createReadStream(langSrc), createGunzip(), createWriteStream(langOut));
+  console.log('  ✓ eng language model (decompressed for offline OCR)');
 
   console.log('www/ assembled.');
 }
