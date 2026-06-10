@@ -36,6 +36,10 @@ const TOOLS = [
   { id: 'wordToPdf', desk: 'convert', title: 'Word → PDF', blurb: 'Render a Word document to PDF.' },
   { id: 'excelToPdf', desk: 'convert', title: 'Excel → PDF', blurb: 'Render a spreadsheet to PDF.' },
   { id: 'pptToPdf', desk: 'convert', title: 'PowerPoint → PDF', blurb: 'Render slides to PDF.', soon: true },
+  { id: 'xmlToPdf', desk: 'convert', title: 'XML → PDF', blurb: 'Pretty-print any XML to a readable PDF.' },
+  { id: 'pdfToXml', desk: 'convert', title: 'PDF → XML', blurb: 'Extract text into structured XML. Best-effort.' },
+  { id: 'pdfToXps', desk: 'convert', title: 'PDF → XPS', blurb: 'Build an XPS from page images.' },
+  { id: 'xpsToPdf', desk: 'convert', title: 'XPS → PDF', blurb: 'Render an XPS document to PDF. Beta.' },
   // Secure & Sign
   { id: 'protectPdf', desk: 'secure', title: 'Password Protect', blurb: 'Lock a PDF with a password.', soon: true },
   { id: 'unlockPdf', desk: 'secure', title: 'Remove Password', blurb: 'Remove a password you know.' },
@@ -47,6 +51,8 @@ const TOOLS = [
   { id: 'ocrSearchable', desk: 'scan', title: 'Make Searchable (OCR)', blurb: 'Add a searchable text layer to scans.' },
   { id: 'extractText', desk: 'scan', title: 'Extract Text', blurb: 'Copy out all the text in a document.' },
   { id: 'viewPDF', desk: 'scan', title: 'View PDF', blurb: 'Open and read any PDF — scroll, zoom, page.' },
+  { id: 'viewXML', desk: 'scan', title: 'View XML', blurb: 'Open and read XML, neatly formatted.' },
+  { id: 'viewXPS', desk: 'scan', title: 'View XPS', blurb: 'Open an XPS document for reading. Beta.' },
 ];
 
 // ── tiny DOM helpers ─────────────────────────────────────────────────────────
@@ -188,6 +194,8 @@ function pickRow({ label, accept, multi, onPicked }) {
       : accept === 'word' ? await folio.openOffice('word')
       : accept === 'excel' ? await folio.openOffice('excel')
       : accept === 'ppt' ? await folio.openOffice('ppt')
+      : accept === 'xml' ? await folio.openXml()
+      : accept === 'xps' ? await folio.openXps()
       : await folio.openAny();
     if (!picked) return;
     if (multi) files.push(...picked);
@@ -369,6 +377,27 @@ const BUILDERS = {
   excelToPdf(tool) { convertOut(tool, 'excel', (b) => folio.excelToPdf(b), 'pdf'); },
   pptToPdf(tool) { soonPanel(tool, 'Slide layout fidelity needs a real renderer; not feasible inside an offline WebView yet. Every other conversion works.'); },
 
+  // ── XML / XPS ──────────────────────────────────────────────────────────────
+  xmlToPdf(tool) { convertOut(tool, 'xml', (b) => folio.xmlToPdf(b), 'pdf'); },
+  pdfToXml(tool) { convertOut(tool, 'pdf', (b) => folio.pdfToXml(b), 'xml'); },
+  xpsToPdf(tool) { convertOut(tool, 'xps', (b) => folio.xpsToPdf(b), 'pdf'); },
+
+  pdfToXps(tool) {
+    const prog = progressBar();
+    const pick = pickRow({ label: 'Source PDF', accept: 'pdf', multi: false });
+    const { status, body } = panelShell(tool, [pick, prog], []);
+    const run = runButton('convert', async () => {
+      if (!pick.files.length) return setStatus(status, 'choose a PDF', true);
+      const out = await folio.pdfToXps(pick.files[0].bytes, (p) => prog.set(p));
+      await deliver(out, `${baseName(pick.files[0])}.xps`, 'xps', status);
+      body.appendChild(filedStamp());
+    }, status);
+    $('#panel .actions').insertBefore(run, $('#panel .actions').firstChild);
+  },
+
+  viewXML(tool) { openXmlViewer(tool); },
+  viewXPS(tool) { openXpsViewer(tool); },
+
   // ── SECURE & SIGN ────────────────────────────────────────────────────────
   protectPdf(tool) { soonPanel(tool, 'PDF encryption needs a crypto layer pdf-lib does not expose yet. We will not produce a file that merely *looks* protected. Remove-password works today.'); },
 
@@ -484,25 +513,55 @@ function soonPanel(tool, note) {
 
 // ── PDF viewer (paged raster) ─────────────────────────────────────────────────
 
+// Render already-in-hand PDF bytes into the paged viewer.
+async function showPdfInViewer(panel, label, pdfBytes) {
+  const geo = await folio.geometry(pdfBytes);
+  panel.innerHTML = '';
+  const pagesWrap = el('div', { class: 'viewer-pages' });
+  const vlabel = el('span', { class: 'vlabel' }, label);
+  const vmeta = el('span', { class: 'vmeta' }, `${geo.pageCount} page${geo.pageCount === 1 ? '' : 's'}`);
+  const bar = el('div', { class: 'viewer-bar' }, vlabel, vmeta,
+    el('span', { style: 'margin-left:auto' }, el('button', { class: 'btn ghost', onclick: closePanel }, 'close')));
+  panel.appendChild(el('div', { class: 'viewer' }, bar, pagesWrap));
+  // Lazy-render pages as we go (keeps memory sane on phones).
+  for (let i = 0; i < geo.pageCount; i++) {
+    const r = await folio.renderPage(pdfBytes, i, 1.4);
+    if (r) pagesWrap.appendChild(el('img', { src: r.dataUrl, alt: `page ${i + 1}` }));
+  }
+}
+
 async function openViewer(tool) {
   const pick = pickRow({ label: 'PDF to view', accept: 'pdf', multi: false });
   const { status, panel } = panelShell(tool, [pick], []);
   const open = runButton('open', async () => {
     if (!pick.files.length) return setStatus(status, 'choose a PDF', true);
-    const bytes = pick.files[0].bytes;
-    const geo = await folio.geometry(bytes);
-    panel.innerHTML = '';
-    const pagesWrap = el('div', { class: 'viewer-pages' });
-    const vlabel = el('span', { class: 'vlabel' }, pick.files[0].name);
-    const vmeta = el('span', { class: 'vmeta' }, `${geo.pageCount} page${geo.pageCount === 1 ? '' : 's'}`);
-    const bar = el('div', { class: 'viewer-bar' }, vlabel, vmeta,
-      el('span', { style: 'margin-left:auto' }, el('button', { class: 'btn ghost', onclick: closePanel }, 'close')));
-    panel.appendChild(el('div', { class: 'viewer' }, bar, pagesWrap));
-    // Lazy-render pages as we go (keeps memory sane on phones).
-    for (let i = 0; i < geo.pageCount; i++) {
-      const r = await folio.renderPage(bytes, i, 1.4);
-      if (r) pagesWrap.appendChild(el('img', { src: r.dataUrl, alt: `page ${i + 1}` }));
-    }
+    await showPdfInViewer(panel, pick.files[0].name, pick.files[0].bytes);
+  }, status);
+  $('#panel .actions').insertBefore(open, $('#panel .actions').firstChild);
+}
+
+// View XPS — render via the XPS → PDF path, then show in the PDF viewer.
+async function openXpsViewer(tool) {
+  const pick = pickRow({ label: 'XPS to view', accept: 'xps', multi: false });
+  const { status, panel } = panelShell(tool, [pick], []);
+  const open = runButton('open', async () => {
+    if (!pick.files.length) return setStatus(status, 'choose an XPS', true);
+    setStatus(status, 'rendering…');
+    const pdfBytes = await folio.viewXps(pick.files[0].bytes);
+    await showPdfInViewer(panel, pick.files[0].name, pdfBytes);
+  }, status);
+  $('#panel .actions').insertBefore(open, $('#panel .actions').firstChild);
+}
+
+// View XML — parse + pretty-print, show in a <pre> block.
+function openXmlViewer(tool) {
+  const out = el('pre', { class: 'textout', style: 'white-space:pre; overflow:auto; max-height:60vh' });
+  const pick = pickRow({ label: 'XML to view', accept: 'xml', multi: false });
+  const { status } = panelShell(tool, [pick, row('Formatted XML', out)], []);
+  const open = runButton('open', async () => {
+    if (!pick.files.length) return setStatus(status, 'choose an XML file', true);
+    out.textContent = folio.viewXml(pick.files[0].bytes);
+    setStatus(status, 'formatted');
   }, status);
   $('#panel .actions').insertBefore(open, $('#panel .actions').firstChild);
 }

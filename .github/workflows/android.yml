@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write   # required so the release step can create/publish v1.0.0
+  contents: write   # required so the release step can create/publish the release
 
 jobs:
   build:
@@ -84,8 +84,8 @@ jobs:
       - name: Collect artifacts
         run: |
           mkdir -p out
-          cp android/app/build/outputs/apk/release/app-release.apk out/Folio-1.0.0.apk
-          cp android/app/build/outputs/bundle/release/app-release.aab out/Folio-1.0.0.aab
+          cp android/app/build/outputs/apk/release/app-release.apk out/Folio-1.1.0.apk
+          cp android/app/build/outputs/bundle/release/app-release.aab out/Folio-1.1.0.aab
           ls -la out
 
       - name: Upload artifacts
@@ -93,17 +93,17 @@ jobs:
         with:
           name: Folio-Android
           path: |
-            out/Folio-1.0.0.apk
-            out/Folio-1.0.0.aab
+            out/Folio-1.1.0.apk
+            out/Folio-1.1.0.aab
           if-no-files-found: error
           retention-days: 30
 
-      - name: Publish to GitHub Release v1.0.0 (stable download link)
+      - name: Publish to GitHub Release v1.1.0 (stable download link)
         if: success()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete v1.0.0 -y --cleanup-tag || true
-          gh release create v1.0.0 out/Folio-1.0.0.apk out/Folio-1.0.0.aab \
-            --title "Folio for Android v1.0.0" \
-            --notes "Folio — Private Edition for Android & Huawei AppGallery. Every PDF tool, 100% on your device. No network, ever (the app ships with NO INTERNET permission). Sideload the .apk on any Android phone incl. Huawei (HMS); .aab is for Google Play. Signed with a throwaway CI key."
+          gh release delete v1.1.0 -y --cleanup-tag || true
+          gh release create v1.1.0 out/Folio-1.1.0.apk out/Folio-1.1.0.aab \
+            --title "Folio for Android v1.1.0" \
+            --notes "Folio — Private Edition for Android & Huawei AppGallery. Every PDF tool, 100% on your device. No network, ever (the app ships with NO INTERNET permission). NEW in v1.1.0: XML and XPS support — XML→PDF, PDF→XML, View XML, PDF→XPS, XPS→PDF (beta) and View XPS, all on-device. Sideload the .apk on any Android phone incl. Huawei (HMS); .aab is for Google Play. Signed with a throwaway CI key."

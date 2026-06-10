@@ -20,6 +20,8 @@ import * as pdf from './engine/pdfEngine.js';
 import * as render from './engine/renderEngine.js';
 import * as ocr from './engine/ocrEngine.js';
 import * as office from './engine/officeEngine.js';
+import * as xml from './engine/xmlEngine.js';
+import * as xps from './engine/xpsEngine.js';
 
 const isNative = Capacitor.isNativePlatform();
 
@@ -64,6 +66,8 @@ function mimeFor(kind) {
     docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    xml: 'application/xml',
+    xps: 'application/vnd.ms-xpsdocument',
   }[kind] || 'application/octet-stream';
 }
 
@@ -110,6 +114,12 @@ const OFFICE_TYPES = {
   excel: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
   ppt: ['application/vnd.openxmlformats-officedocument.presentationml.presentation'],
 };
+// Android often reports .xml as text/plain and .xps as octet-stream, so we
+// include those fallbacks alongside the canonical MIME types — otherwise the
+// system picker would grey the files out. On the web fallback, the <input
+// accept> list combines extension + MIME and the extension is what filters.
+const XML_TYPES = ['.xml', 'application/xml', 'text/xml', 'text/plain'];
+const XPS_TYPES = ['.xps', 'application/vnd.ms-xpsdocument', 'application/oxps', 'application/octet-stream'];
 
 // ── export (save to app Documents + offer share) ─────────────────────────────
 // Writes into the app's Documents directory so the user always has a copy, and
@@ -212,6 +222,8 @@ const folio = {
   openPdf: (multi = false) => pickFiles({ types: PDF_TYPES, multi }),
   openImages: () => pickFiles({ types: IMG_TYPES, multi: true }),
   openOffice: (kind) => pickFiles({ types: OFFICE_TYPES[kind], multi: false }),
+  openXml: () => pickFiles({ types: XML_TYPES, multi: false }),
+  openXps: () => pickFiles({ types: XPS_TYPES, multi: false }),
   openAny: () => pickFiles({ multi: false }),
 
   // export
@@ -261,6 +273,15 @@ const folio = {
   wordToPdf: (bytes) => office.wordToPdf(toU8(bytes)),
   excelToPdf: (bytes) => office.excelToPdf(toU8(bytes)),
   pptToPdf: () => office.pptToPdf(),
+
+  // convert — XML / XPS (shared xmlEngine + xpsEngine)
+  xmlToPdf: (bytes) => xml.xmlToPdf(toU8(bytes)),
+  pdfToXml: (bytes) => xml.pdfToXml(toU8(bytes)),
+  viewXml: (bytes) => xml.viewXml(toU8(bytes)),
+  pdfToXps: (bytes, onProgress) =>
+    xps.pdfToXps(toU8(bytes), (b, o) => render.rasterizePages(b, { ...o, onProgress }), { scale: 2 }),
+  xpsToPdf: (bytes) => xps.xpsToPdf(toU8(bytes)),
+  viewXps: (bytes) => xps.viewXps(toU8(bytes)),
 
   // util
   _u8: toU8,
